@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PromptVault — design reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mulish:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Ovo&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --color-background: #faf9fa;
+    --color-text: #2c2c2c;
+    --color-highlight-1: #9a63b4;
+    --color-highlight-2: #a650a6;
+    --color-highlight-3: #9a63b4;
+    --color-highlight-4: #9a63b4;
+    --color-highlight-5: #9a63b4;
+    --color-shadow: #f0f0f0;
+    --color-shadow-light: #5e565e;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+  :root.dark {
+    --color-background: #383a59;
+    --color-text: #f2f2f2;
+    --color-highlight-1: #bd93f9;
+    --color-highlight-2: #ff79c6;
+    --color-highlight-3: #50fa7b;
+    --color-highlight-4: #ffb86c;
+    --color-highlight-5: #8be9fd;
+    --color-shadow: #282a36;
+    --color-shadow-light: #bcc2cd;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--color-shadow);
+    color: var(--color-text);
+    font-family: 'Mulish', sans-serif;
+    transition: background .25s ease, color .25s ease;
+  }
+  h1, h2, h3 { font-family: 'Ovo', serif; font-weight: 400; margin: 0; }
+
+  .pv-wrap { max-width: 1180px; margin: 0 auto; padding: 56px 32px 96px; }
+
+  .pv-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 20px; flex-wrap: wrap; padding-bottom: 28px; margin-bottom: 36px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-shadow-light) 35%, transparent);
+  }
+  .pv-brand { display: flex; align-items: center; gap: 16px; }
+  .pv-logo {
+    width: 46px; height: 46px; border-radius: 13px; flex-shrink: 0;
+    background: var(--color-highlight-1); display: flex; align-items: center; justify-content: center;
+  }
+  .pv-logo svg { stroke: #ffffff; }
+  :root.dark .pv-logo svg { stroke: var(--color-shadow); }
+  .pv-title { font-size: 30px; letter-spacing: -0.01em; }
+  .pv-subtitle { margin: 6px 0 0; font-size: 14px; color: var(--color-shadow-light); }
+
+  .pv-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .pv-btn-ghost {
+    display: flex; align-items: center; gap: 7px; padding: 9px 16px; border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-shadow-light) 35%, transparent);
+    background: transparent; color: var(--color-text);
+    font: inherit; font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    cursor: pointer;
+  }
+  .pv-btn-ghost:hover { border-color: var(--color-highlight-1); color: var(--color-highlight-1); }
+  .pv-divider { width: 1px; height: 26px; background: color-mix(in srgb, var(--color-shadow-light) 35%, transparent); }
+
+  .pv-theme-toggle { display: flex; align-items: center; gap: 9px; background: none; border: none; cursor: pointer; padding: 4px; }
+  .pv-toggle-track {
+    width: 46px; height: 26px; border-radius: 999px; padding: 2px; display: flex; align-items: center;
+    background: var(--color-shadow); border: 1px solid color-mix(in srgb, var(--color-shadow-light) 35%, transparent);
+    justify-content: flex-start; transition: background .2s ease, justify-content .2s ease;
+  }
+  :root.dark .pv-toggle-track { background: var(--color-highlight-1); justify-content: flex-end; }
+  .pv-toggle-knob { width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+
+  .pv-grid { display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 28px; align-items: start; }
+  @media (max-width: 900px) { .pv-grid { grid-template-columns: 1fr; } }
+
+  .pv-card {
+    background: var(--color-background); border-radius: 18px; padding: 30px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 16px 32px -20px rgba(0,0,0,.14);
+  }
+  :root.dark .pv-card { box-shadow: 0 1px 2px rgba(0,0,0,.35), 0 16px 32px -20px rgba(0,0,0,.55); }
+
+  .pv-card h2 { font-size: 21px; margin-bottom: 22px; }
+
+  .pv-label { display: block; font-size: 11px; font-weight: 800; letter-spacing: .08em; color: var(--color-shadow-light); margin-bottom: 8px; }
+  .pv-hint { margin: 8px 0 20px; font-size: 12.5px; color: var(--color-shadow-light); }
+  .pv-field {
+    display: block; width: 100%; padding: 11px 13px; border-radius: 10px;
+    border: 1.5px solid color-mix(in srgb, var(--color-shadow-light) 35%, transparent);
+    background: var(--color-shadow); color: var(--color-text); font: inherit; font-size: 14.5px;
+  }
+  .pv-field:focus { outline: none; border-color: var(--color-highlight-1); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-highlight-1) 25%, transparent); }
+  .pv-field.mono { font-family: var(--font-mono); font-size: 14px; }
+  textarea.pv-field { resize: vertical; line-height: 1.5; }
+
+  .pv-btn-primary {
+    width: 100%; padding: 13px; border-radius: 10px; border: none; font: inherit;
+    font-size: 14.5px; font-weight: 800; letter-spacing: .02em; cursor: pointer;
+    background: var(--color-highlight-1); color: #ffffff;
+  }
+  :root.dark .pv-btn-primary { color: var(--color-shadow); }
+  .pv-btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+  .pv-list-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .pv-count {
+    min-width: 26px; height: 26px; padding: 0 8px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
+    background: color-mix(in srgb, var(--color-highlight-1) 14%, transparent); color: var(--color-highlight-1);
+    font-size: 13px; font-weight: 800;
+  }
+  :root.dark .pv-count { background: color-mix(in srgb, var(--color-highlight-1) 20%, transparent); }
+
+  .pv-list { display: flex; flex-direction: column; gap: 18px; }
+  .pv-prompt-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .pv-prompt-title { font-size: 17px; font-weight: 800; margin: 0 0 6px; }
+  .pv-prompt-content { margin: 0; font-size: 14px; line-height: 1.5; color: var(--color-shadow-light); max-width: 60ch;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+  .pv-btn-delete {
+    flex-shrink: 0; padding: 7px 14px; border-radius: 999px; font: inherit;
+    border: 1px solid color-mix(in srgb, var(--color-shadow-light) 45%, transparent);
+    background: transparent; color: var(--color-shadow-light);
+    font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; cursor: pointer;
+  }
+  .pv-btn-delete:hover { border-color: var(--color-highlight-2); color: var(--color-highlight-2); }
+
+  .pv-badges { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+  .pv-badge-model {
+    padding: 5px 12px; border-radius: 999px; font-family: var(--font-mono); font-size: 12.5px; font-weight: 600;
+    background: color-mix(in srgb, var(--color-highlight-2) 12%, transparent); color: var(--color-highlight-2);
+  }
+  :root.dark .pv-badge-model { background: color-mix(in srgb, var(--color-highlight-2) 18%, transparent); }
+  .pv-badge-tokens {
+    padding: 5px 12px; border-radius: 999px; font-family: var(--font-mono); font-size: 12.5px; font-weight: 600;
+    border: 1px solid color-mix(in srgb, var(--color-highlight-3) 55%, transparent); color: var(--color-highlight-3);
+  }
+  .pv-date { font-size: 13px; color: var(--color-shadow-light); }
+
+  .pv-stars { display: flex; align-items: center; gap: 4px; margin-top: 14px; }
+  .pv-star { background: none; border: none; padding: 2px; cursor: pointer; line-height: 0; }
+  .pv-star svg { stroke-width: 1.4; }
+
+  .pv-notes { margin-top: 18px; padding-top: 18px; border-top: 1px solid color-mix(in srgb, var(--color-shadow-light) 35%, transparent); }
+  .pv-notes-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .pv-notes-label { font-size: 11px; font-weight: 800; letter-spacing: .08em; color: var(--color-shadow-light); }
+  .pv-btn-note {
+    padding: 5px 12px; border-radius: 999px; font: inherit; cursor: pointer;
+    border: 1px solid var(--color-highlight-1); background: transparent; color: var(--color-highlight-1);
+    font-size: 11.5px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase;
+  }
+  .pv-note-box {
+    background: color-mix(in srgb, var(--color-highlight-5) 8%, transparent);
+    border-left: 3px solid var(--color-highlight-5); border-radius: 0 10px 10px 0;
+    padding: 12px 14px; font-size: 13.5px; line-height: 1.55; color: var(--color-text);
+  }
+  :root.dark .pv-note-box { background: color-mix(in srgb, var(--color-highlight-5) 14%, transparent); }
+  .pv-note-empty { margin: 0; font-size: 13.5px; color: var(--color-shadow-light); }
+  .pv-note-editor textarea { margin-bottom: 10px; }
+  .pv-note-actions { display: flex; gap: 8px; }
+  .pv-btn-note-save { padding: 7px 14px; border-radius: 999px; border: none; font: inherit; cursor: pointer;
+    background: var(--color-highlight-1); color: #fff; font-size: 11.5px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; }
+  :root.dark .pv-btn-note-save { color: var(--color-shadow); }
+  .pv-btn-note-cancel { padding: 7px 14px; border-radius: 999px; font: inherit; cursor: pointer;
+    border: 1px solid color-mix(in srgb, var(--color-shadow-light) 35%, transparent); background: transparent; color: var(--color-text);
+    font-size: 11.5px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; }
+  .pv-btn-note-delete { padding: 7px 14px; border-radius: 999px; font: inherit; cursor: pointer;
+    border: 1px solid color-mix(in srgb, var(--color-highlight-2) 50%, transparent); background: transparent; color: var(--color-highlight-2);
+    font-size: 11.5px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; }
+
+  .pv-empty {
+    border: 1.5px dashed color-mix(in srgb, var(--color-shadow-light) 35%, transparent); border-radius: 18px;
+    padding: 48px 24px; text-align: center; color: var(--color-shadow-light); font-size: 14.5px;
+  }
+
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="pv-wrap">
+
+  <header class="pv-header">
+    <div class="pv-brand">
+      <div class="pv-logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.6 6.7L21 11l-6.4 2.4L12 21l-2.6-7.6L3 11l6.4-2.3L12 2z"></path></svg>
+      </div>
+      <div>
+        <h1 class="pv-title">PromptVault</h1>
+        <p class="pv-subtitle">Your personal library of AI prompts</p>
+      </div>
+    </div>
+    <div class="pv-actions">
+      <button type="button" class="pv-btn-ghost" title="Export your prompt library">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="M7 10l5 5 5-5"></path><path d="M5 21h14"></path></svg>
+        Export
+      </button>
+      <button type="button" class="pv-btn-ghost" title="Import a prompt library">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9"></path><path d="M7 14l5-5 5 5"></path><path d="M5 3h14"></path></svg>
+        Import
+      </button>
+      <div class="pv-divider"></div>
+      <button type="button" id="themeToggle" class="pv-theme-toggle" aria-pressed="false" aria-label="Toggle dark mode">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-shadow-light)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+        <span class="pv-toggle-track"><span class="pv-toggle-knob"></span></span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-shadow-light)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"></path></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="pv-grid">
+    <section class="pv-card">
+      <h2>Add Prompt</h2>
+      <form id="addPromptForm">
+        <label class="pv-label" for="pv-title">Title</label>
+        <input id="pv-title" class="pv-field" type="text" maxlength="120" placeholder="e.g. Blog Idea Generator">
+        <p class="pv-hint">Required. Max 120 characters.</p>
+
+        <label class="pv-label" for="pv-model">Model</label>
+        <input id="pv-model" class="pv-field mono" type="text" maxlength="100" placeholder="e.g. gpt-4o-mini">
+        <p class="pv-hint">Required. Model identifier (max 100 chars).</p>
+
+        <label class="pv-label" for="pv-content">Content</label>
+        <textarea id="pv-content" class="pv-field" rows="7" placeholder="Enter the full prompt here..."></textarea>
+        <p class="pv-hint">Required.</p>
+
+        <button type="submit" id="saveBtn" class="pv-btn-primary" disabled>Save Prompt</button>
+      </form>
+    </section>
+
+    <section>
+      <div class="pv-list-header">
+        <h2>Saved Prompts</h2>
+        <span class="pv-count" id="promptCount">0</span>
+      </div>
+      <div class="pv-list" id="promptList"></div>
+      <div class="pv-empty" id="emptyState" hidden>No prompts saved yet. Add your first one!</div>
+    </section>
+  </div>
+</div>
+
+<script>
+  // ---------- Theme ----------
+  var THEME_KEY = 'promptvault-theme';
+  function applyTheme(dark) {
+    document.documentElement.classList.toggle('dark', dark);
+    document.getElementById('themeToggle').setAttribute('aria-pressed', String(dark));
+  }
+  function initTheme() {
+    var saved = localStorage.getItem(THEME_KEY);
+    var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    applyTheme(saved ? saved === 'dark' : prefersDark);
+  }
+  document.getElementById('themeToggle').addEventListener('click', function () {
+    var isDark = !document.documentElement.classList.contains('dark');
+    applyTheme(isDark);
+    localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+  });
+  initTheme();
+
+  // ---------- State ----------
+  var nextId = 3;
+  var prompts = [
+    {
+      id: 1,
+      title: 'WordPress Custom Block Generator',
+      content: 'Generate a Gutenberg block.json + edit.js + save.js scaffold for a block called {{name}} that supports {{attributes}}, following current core block conventions.',
+      model: 'claude-opus-4-1',
+      tokens: '180–420 (medium)',
+      date: 'Sep 18, 9:47 AM',
+      rating: 4,
+      note: 'Pair this with the actual block.json schema — it infers supports and attributes far more accurately with real context.',
+      noteMode: 'view',
+      noteDraft: ''
+    },
+    {
+      id: 2,
+      title: 'React Component Refactor',
+      content: 'Refactor the following React component to use hooks instead of class lifecycle methods, keep prop types identical, and flag any unnecessary re-renders.',
+      model: 'gpt-4o-mini',
+      tokens: '60–150 (low)',
+      date: 'Sep 20, 2:05 PM',
+      rating: 5,
+      note: null,
+      noteMode: 'view',
+      noteDraft: ''
+    }
+  ];
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function starSvg(filled) {
+    var color = filled ? 'var(--color-highlight-4)' : 'var(--color-shadow-light)';
+    return '<svg width="17" height="17" viewBox="0 0 24 24" style="fill:' + (filled ? color : 'none') + ';stroke:' + color + '">' +
+      '<path d="M12 2.5l2.9 6.3 6.9.7-5.2 4.7 1.5 6.8L12 17.8l-6.1 3.2 1.5-6.8L2.2 9.5l6.9-.7L12 2.5z"></path></svg>';
+  }
+
+  function renderPrompt(p) {
+    var stars = '';
+    for (var n = 1; n <= 5; n++) {
+      stars += '<button type="button" class="pv-star" data-action="rate" data-id="' + p.id + '" data-value="' + n + '" aria-label="Rate ' + n + ' stars">' + starSvg(n <= p.rating) + '</button>';
+    }
+
+    var notesBody = '';
+    if (p.noteMode === 'edit') {
+      notesBody =
+        '<div class="pv-note-editor">' +
+          '<textarea class="pv-field" rows="3" placeholder="Add a note about this prompt..." data-action="note-draft" data-id="' + p.id + '">' + escapeHtml(p.noteDraft) + '</textarea>' +
+          '<div class="pv-note-actions">' +
+            '<button type="button" class="pv-btn-note-save" data-action="note-save" data-id="' + p.id + '">Save Note</button>' +
+            '<button type="button" class="pv-btn-note-cancel" data-action="note-cancel" data-id="' + p.id + '">Cancel</button>' +
+            (p.note ? '<button type="button" class="pv-btn-note-delete" data-action="note-delete" data-id="' + p.id + '">Delete Note</button>' : '') +
+          '</div>' +
+        '</div>';
+    } else if (p.note) {
+      notesBody = '<div class="pv-note-box">' + escapeHtml(p.note) + '</div>';
+    } else {
+      notesBody = '<p class="pv-note-empty">No notes yet.</p>';
+    }
+
+    var noteHeadBtn = p.noteMode === 'view'
+      ? '<button type="button" class="pv-btn-note" data-action="note-open" data-id="' + p.id + '">' + (p.note ? 'Edit' : 'Add') + '</button>'
+      : '';
+
+    return (
+      '<article class="pv-card" data-prompt-id="' + p.id + '">' +
+        '<div class="pv-prompt-top">' +
+          '<div>' +
+            '<h3 class="pv-prompt-title">' + escapeHtml(p.title) + '</h3>' +
+            '<p class="pv-prompt-content">' + escapeHtml(p.content) + '</p>' +
+          '</div>' +
+          '<button type="button" class="pv-btn-delete" data-action="delete" data-id="' + p.id + '" aria-label="Delete ' + escapeHtml(p.title) + '">Delete</button>' +
+        '</div>' +
+        '<div class="pv-badges">' +
+          '<span class="pv-badge-model">' + escapeHtml(p.model) + '</span>' +
+          '<span class="pv-badge-tokens">Tokens: ' + escapeHtml(p.tokens) + '</span>' +
+          '<span class="pv-date">' + escapeHtml(p.date) + '</span>' +
+        '</div>' +
+        '<div class="pv-stars">' + stars + '</div>' +
+        '<div class="pv-notes">' +
+          '<div class="pv-notes-head"><span class="pv-notes-label">Notes</span>' + noteHeadBtn + '</div>' +
+          notesBody +
+        '</div>' +
+      '</article>'
+    );
+  }
+
+  function render() {
+    var list = document.getElementById('promptList');
+    var empty = document.getElementById('emptyState');
+    document.getElementById('promptCount').textContent = prompts.length;
+    if (prompts.length === 0) {
+      list.innerHTML = '';
+      empty.hidden = false;
+    } else {
+      empty.hidden = true;
+      list.innerHTML = prompts.map(renderPrompt).join('');
+    }
+  }
+
+  function findPrompt(id) {
+    return prompts.find(function (p) { return p.id === id; });
+  }
+
+  document.getElementById('promptList').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    var id = Number(btn.getAttribute('data-id'));
+    var action = btn.getAttribute('data-action');
+    var p = findPrompt(id);
+    if (!p) return;
+
+    if (action === 'delete') {
+      prompts = prompts.filter(function (x) { return x.id !== id; });
+    } else if (action === 'rate') {
+      p.rating = Number(btn.getAttribute('data-value'));
+    } else if (action === 'note-open') {
+      p.noteMode = 'edit';
+      p.noteDraft = p.note || '';
+    } else if (action === 'note-save') {
+      p.note = (p.noteDraft || '').trim() || null;
+      p.noteMode = 'view';
+    } else if (action === 'note-cancel') {
+      p.noteMode = 'view';
+      p.noteDraft = '';
+    } else if (action === 'note-delete') {
+      p.note = null;
+      p.noteMode = 'view';
+      p.noteDraft = '';
+    }
+    render();
+  });
+
+  document.getElementById('promptList').addEventListener('input', function (e) {
+    if (e.target.getAttribute('data-action') !== 'note-draft') return;
+    var id = Number(e.target.getAttribute('data-id'));
+    var p = findPrompt(id);
+    if (p) p.noteDraft = e.target.value;
+  });
+
+  // ---------- Add prompt form ----------
+  var titleInput = document.getElementById('pv-title');
+  var modelInput = document.getElementById('pv-model');
+  var contentInput = document.getElementById('pv-content');
+  var saveBtn = document.getElementById('saveBtn');
+
+  function refreshSaveState() {
+    saveBtn.disabled = !(titleInput.value.trim() && modelInput.value.trim() && contentInput.value.trim());
+  }
+  [titleInput, modelInput, contentInput].forEach(function (el) {
+    el.addEventListener('input', refreshSaveState);
+  });
+
+  document.getElementById('addPromptForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (saveBtn.disabled) return;
+    prompts.unshift({
+      id: nextId++,
+      title: titleInput.value.trim(),
+      content: contentInput.value.trim(),
+      model: modelInput.value.trim(),
+      tokens: '—',
+      date: 'Just now',
+      rating: 0,
+      note: null,
+      noteMode: 'view',
+      noteDraft: ''
+    });
+    titleInput.value = '';
+    modelInput.value = '';
+    contentInput.value = '';
+    refreshSaveState();
+    render();
+  });
+
+  render();
+</script>
+</body>
+</html>
