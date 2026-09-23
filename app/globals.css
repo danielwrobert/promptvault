@@ -1,26 +1,66 @@
 @import "tailwindcss";
 
+/* Tailwind v4 replacement for darkMode: 'class' — dark: utilities follow .dark on <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Design tokens (names match design/promptvault-redesign/HANDOFF.md) */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-background: #faf9fa;
+  --color-text: #2c2c2c;
+  --color-highlight-1: #9a63b4;
+  --color-highlight-2: #a650a6;
+  --color-highlight-3: #9a63b4;
+  --color-highlight-4: #9a63b4;
+  --color-highlight-5: #9a63b4;
+  --color-shadow: #f0f0f0;
+  --color-shadow-light: #5e565e;
+}
+
+:root.dark {
+  --color-background: #383a59;
+  --color-text: #f2f2f2;
+  --color-highlight-1: #bd93f9;
+  --color-highlight-2: #ff79c6;
+  --color-highlight-3: #50fa7b;
+  --color-highlight-4: #ffb86c;
+  --color-highlight-5: #8be9fd;
+  --color-shadow: #282a36;
+  --color-shadow-light: #bcc2cd;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-surface: var(--color-background);
+  --color-ink: var(--color-text);
+  --color-page: var(--color-shadow);
+  --color-muted: var(--color-shadow-light);
+  --color-hl-1: var(--color-highlight-1);
+  --color-hl-2: var(--color-highlight-2);
+  --color-hl-3: var(--color-highlight-3);
+  --color-hl-4: var(--color-highlight-4);
+  --color-hl-5: var(--color-highlight-5);
+
+  --font-sans: var(--font-mulish), sans-serif;
+  --font-body: var(--font-mulish), sans-serif;
+  --font-heading: var(--font-ovo), serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@theme {
+  --radius-field: 10px;  /* inputs, primary button, note box */
+  --radius-logo: 13px;
+  --radius-card: 18px;   /* cards, empty state */
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.05), 0 16px 32px -20px rgb(0 0 0 / 0.14);
+  --shadow-card-dark: 0 1px 2px rgb(0 0 0 / 0.35), 0 16px 32px -20px rgb(0 0 0 / 0.55);
+  --shadow-knob: 0 1px 3px rgb(0 0 0 / 0.35);
+}
+
+@layer base {
+  /* reference.html never sets line-height; Tailwind preflight sets 1.5 — undo it */
+  html { line-height: normal; }
+
+  h1, h2, h3 {
+    font-family: var(--font-ovo), serif;
+    font-weight: 400;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }
