@@ -1,9 +1,6 @@
-import { ExportIcon, ImportIcon, SparkleIcon } from "@/app/components/icons";
-import { focusRing } from "@/app/components/styles";
+import { SparkleIcon } from "@/app/components/icons";
+import { LibraryActions } from "@/app/components/library-actions";
 import { ThemeToggle } from "@/app/components/theme-toggle";
-
-const ghostButton =
-  `flex items-center gap-[7px] rounded-full border border-muted/35 px-4 py-[9px] text-[13px] font-bold uppercase tracking-[.04em] text-ink cursor-pointer transition-colors hover:border-hl-1 hover:text-hl-1 ${focusRing}`;
 
 export function Header() {
   return (
@@ -18,14 +15,7 @@ export function Header() {
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-3.5">
-        <button type="button" title="Export your prompt library" className={ghostButton}>
-          <ExportIcon />
-          Export
-        </button>
-        <button type="button" title="Import a prompt library" className={ghostButton}>
-          <ImportIcon />
-          Import
-        </button>
+        <LibraryActions />
         <div aria-hidden="true" className="h-[26px] w-px bg-muted/35" />
         <ThemeToggle />
       </div>

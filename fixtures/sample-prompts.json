@@ -1,0 +1,27 @@
+{
+  "app": "promptvault",
+  "version": 1,
+  "exportedAt": "2026-09-20T14:05:00.000Z",
+  "prompts": [
+    {
+      "id": "seed-1",
+      "title": "WordPress Custom Block Generator",
+      "model": "claude-opus-4-1",
+      "content": "Generate a Gutenberg block.json + edit.js + save.js scaffold for a block called {{name}} that supports {{attributes}}, following current core block conventions.",
+      "rating": 4,
+      "note": "Pair this with the actual block.json schema — it infers supports and attributes far more accurately with real context.",
+      "createdAt": "2026-09-18T09:47:00Z",
+      "updatedAt": "2026-09-18T09:47:00Z"
+    },
+    {
+      "id": "seed-2",
+      "title": "React Component Refactor",
+      "model": "gpt-4o-mini",
+      "content": "Refactor the following React component to use hooks instead of class lifecycle methods, keep prop types identical, and flag any unnecessary re-renders.",
+      "rating": 5,
+      "note": null,
+      "createdAt": "2026-09-20T14:05:00Z",
+      "updatedAt": "2026-09-20T14:05:00Z"
+    }
+  ]
+}
