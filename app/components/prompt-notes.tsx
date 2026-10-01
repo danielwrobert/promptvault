@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { field, pillSmall } from "@/app/components/styles";
+import { field, pillAccent, pillDanger, pillFilled, pillOutlineMuted } from "@/app/components/styles";
 
 type PromptNotesProps = {
   note: string | null;
@@ -40,7 +40,7 @@ export function PromptNotes({ note, onChange }: PromptNotesProps) {
           <button
             type="button"
             onClick={openEditor}
-            className={`${pillSmall} border border-hl-1 px-3 py-[5px] text-hl-1`}
+            className={pillAccent}
           >
             {note ? "Edit" : "Add"}
           </button>
@@ -62,14 +62,14 @@ export function PromptNotes({ note, onChange }: PromptNotesProps) {
             <button
               type="button"
               onClick={save}
-              className={`${pillSmall} px-3.5 py-[7px] border-0 bg-hl-1 text-white dark:text-page`}
+              className={pillFilled}
             >
               Save Note
             </button>
             <button
               type="button"
               onClick={cancel}
-              className={`${pillSmall} px-3.5 py-[7px] border border-muted/35 text-ink`}
+              className={pillOutlineMuted}
             >
               Cancel
             </button>
@@ -77,7 +77,7 @@ export function PromptNotes({ note, onChange }: PromptNotesProps) {
               <button
                 type="button"
                 onClick={deleteNote}
-                className={`${pillSmall} px-3.5 py-[7px] border border-hl-2/50 text-hl-2`}
+                className={pillDanger}
               >
                 Delete Note
               </button>
