@@ -1,18 +1,25 @@
-# PromptVault: search and pagination
+# PromptVault: search and pagination (revised)
 
 ## Context
 
-Phase 2 (PR #2) made the library persistent but renders every prompt in one list, and has no way to find one. Search, filter and sort were explicitly out of scope there. This plan adds **search** and **pagination** to the Saved Prompts list.
+Phase 2 (PR #2, merged) made the library persistent. It still renders every prompt in one list, though, and gives no way to find one. Search, filter and sort were explicitly out of scope in Phase 2. This plan adds **search** and **pagination** to the Saved Prompts list.
 
-**Branch:** `add/search-and-pagination`, created from `add/phase-two-functionality` because PR #2 isn't merged yet. When PR #2 merges, retarget this branch's PR to `main`.
+**Branch:** `add/search-and-pagination`, off `main`. Own PR to `main`.
 
-**Stack and rules:** unchanged from Phase 2. The Phase 2 plan's "Tailwind v4 preflight traps" and its `react-hooks` lint notes (`set-state-in-effect`, `purity`, `refs`) all still apply. AGENTS.md still applies, but nothing here is Next.js-specific, since state stays in components (see decisions).
+**Stack and rules:** unchanged from Phase 2. The Phase 1 "Tailwind v4 preflight traps" all still apply:
+- pixel font sizes
+- `cursor-pointer` on every button
+- `border` paired with a color
+- don't override properties inside shared constants
+- no hex
+
+The Phase 2 `react-hooks` lint notes (`set-state-in-effect`, `purity`, `refs`) also still apply. AGENTS.md applies too, but nothing here touches Next.js APIs.
 
 ## Decisions already made (don't re-ask)
 
 | Topic | Decision |
 |---|---|
-| Where | Own branch and PR. PR #2 is not extended. |
+| Where | Own branch and PR. |
 | Search matches | Title, content, model and note. |
 | Pagination style | A "Load more prompts" button, **10 at a time**. No numbered pages, no infinite scroll. |
 | State | Component state only. Reload resets the search. Nothing goes in the URL. |
@@ -20,32 +27,36 @@ Phase 2 (PR #2) made the library persistent but renders every prompt in one list
 ## Defaults chosen in this plan (veto any of these)
 
 1. **Matching:** case-insensitive substring. A query with several words matches when **every word** appears somewhere in the four fields (AND), in any order or field.
-2. **Search box visibility:** shown whenever the library has at least one prompt. Hidden in the loading, error and empty-library states.
+2. **Search box visibility:** shown when `prompts.length > 0 || query !== ""`. It is hidden in the loading and error states, and in the empty library unless a query is still set. That way a leftover query is never applied out of sight.
 3. **After adding a prompt:** the search is cleared, so the new prompt is visible instead of silently filtered out.
-4. **After editing a prompt so it no longer matches:** it leaves the list on save, like any other non-matching prompt. No special handling.
-5. **Export ignores the search.** It always exports the whole library. Import is unchanged.
-6. **Storage interface unchanged.** Searching and paging are pure functions over the full in-memory list. When Phase 3 moves to Supabase, these become `list({ query, limit, cursor })` on the repository, and the pure functions here are the behavior to match. Don't change `PromptRepository` now.
-7. **Page size** is a constant, `PAGE_SIZE = 10`, and is not user-configurable.
+4. **After an edit (editor or note) makes a prompt stop matching:** it leaves the list on save. If focus was inside that card, focus moves to the "Saved Prompts" heading, the same as delete. There is no "keep it pinned until the query changes" behavior.
+5. **Count display:** the badge always shows the **library total**, as in Phase 2. While a query is active, a visible muted line under the search box reads "3 of 25 prompts" (singular: "1 of 25 prompts"). That line is the `aria-live` region.
+6. **Export ignores the search.** It always exports the whole library. Import is unchanged.
+7. **Storage interface unchanged.** Searching and paging are pure functions over the full in-memory list. Don't change `PromptRepository` now (see Phase 3 preview).
+8. **Page size** is a constant, `PAGE_SIZE = 10`, and is not user-configurable.
 
-Out of scope: sort controls, model or rating filters, tags, highlighting matched text, URL state, persisting the search, a debounce (see Step 4 for the measurement that would justify one).
+Out of scope: sort controls, model or rating filters, tags, highlighting matched text, URL state, persisting the search, and a debounce (see Step 4). Also out of scope: inline note save losing focus when the card *stays* in the list. That already happens today and isn't caused by this change.
 
 ## Step 0: Read before coding
 
-- `app/components/prompt-vault.tsx` (the list, the count badge, the empty and error states)
-- `app/components/styles.ts` (reuse `field`, `label`, `linkButton`, `pillAccent`; don't invent colors)
-- `app/components/prompts-provider.tsx` (`status`, `prompts`; the actions don't change)
-- `app/components/prompt-card.tsx` (focus handling after delete targets `#saved-prompts-heading`)
+- `app/components/prompt-vault.tsx`: the list, the count badge, the empty and error states.
+- `app/components/styles.ts`: reuse `field`, `linkButton`, `pillAccent` and `focusRing`. Don't invent colors.
+- `app/components/prompts-provider.tsx`: `status` and `prompts`. The actions don't change.
+- `app/components/prompt-card.tsx`: the focus handling after delete (`#saved-prompts-heading`) and after closing the editor.
+- `app/components/prompt-fields.tsx`: the `titleRef` prop pattern, which `inputRef` mirrors.
+- `app/lib/prompts/sort.ts`: the list is already newest-first, and filtering must keep that order.
 
 ## Target file layout
 
 ```
-app/lib/prompts/search.ts              (new)    filterPrompts, buildSearchIndex, PAGE_SIZE, pageOf
+app/lib/prompts/search.ts              (new)    PAGE_SIZE, buildSearchIndex, filterPrompts
 app/lib/prompts/search.test.ts         (new)    unit tests
-app/components/prompt-search.tsx       (new, "use client")  search input + clear
-app/components/prompt-vault.tsx        (modify) query + visibleCount state, filtered list, Load more
-app/components/add-prompt-form.tsx     (modify) clear the search after a successful add
-app/components/icons.tsx               (modify) add SearchIcon (only if the input uses one)
-app/components/styles.ts               (modify) only if a new shared constant is needed
+app/components/prompt-search.tsx       (new, "use client")  search input, Clear, results line
+app/components/prompt-vault.tsx        (modify) query + visibleCount state, filtered list, Load more, focus
+app/components/prompt-card.tsx         (modify) data-prompt-id, data-card-focus, focus rescue on unmount
+app/components/add-prompt-form.tsx     (modify) optional onAdded prop
+app/globals.css                        (modify) hide the native search ✕
+app/components/icons.tsx               (modify) SearchIcon, only if the input uses one
 ```
 
 ## Step 1: Pure logic (`app/lib/prompts/search.ts`)
@@ -58,42 +69,55 @@ export const PAGE_SIZE = 10;
 export type SearchIndexEntry = { prompt: Prompt; haystack: string };
 
 /** Lowercased "title\ncontent\nmodel\nnote" per prompt, built once per list change. */
-export function buildSearchIndex(prompts: Prompt[]): SearchIndexEntry[];
+export function buildSearchIndex(prompts: readonly Prompt[]): SearchIndexEntry[];
 
-/** Returns matching prompts in their existing order. Empty or whitespace query returns all. */
-export function filterPrompts(index: SearchIndexEntry[], query: string): Prompt[];
+/** Matching prompts in index order. An empty or whitespace query returns every prompt. */
+export function filterPrompts(index: readonly SearchIndexEntry[], query: string): Prompt[];
 ```
 
 Rules:
-- Normalize the query: trim, lowercase, split on whitespace into terms. No terms means no filtering.
-- An entry matches when every term is a substring of its `haystack`.
-- Use `toLowerCase()` on both sides. Don't add locale or diacritic folding.
-- A `null` note contributes nothing to the haystack.
-- Don't treat the query as a regex. Characters like `(`, `[` and `.` are literal.
-- Filtering never reorders: results keep the list's newest-first order.
+- Normalize the query: trim, lowercase, split on `/\s+/`. No terms means no filtering.
+- An entry matches when every term `includes` in its `haystack`. Fields are joined with `\n`. Terms never contain whitespace, so a term can't match across two fields.
+- Use `toLowerCase()` on both sides, with no locale or diacritic folding.
+- A `null` note contributes nothing, so it can't match the word "null".
+- Never build a `RegExp` from the query.
+- Never reorder the results.
 
 ## Step 2: Search input (`app/components/prompt-search.tsx`)
 
-Props: `{ value: string; onChange: (value: string) => void; resultCount: number; total: number }`.
+Props: `{ value: string; onChange: (value: string) => void; inputRef?: React.Ref<HTMLInputElement>; resultCount: number; total: number }`.
 
-- `<input type="search">` with a real `<label>` (visually hidden with `sr-only`, text "Search prompts") and the placeholder "Search title, content, model or note…". Use the shared `field` constant for the input. No new colors.
-- A **Clear** button (`linkButton`) shown only while the query is non-empty. It clears the query and returns focus to the input.
-- **Escape** in the input clears the query.
-- An `aria-live="polite"` `sr-only` status: "N prompts found" while a query is active, empty otherwise. Don't announce on every keystroke for an empty query.
-- Layout: sits between the "Saved Prompts" heading row and the list, with `mb-5`. It must not change the heading row or the card layout.
+- Use `<input type="search">` with a real `<label>` (`sr-only`, text "Search prompts"). Placeholder: "Search title, content, model or note…". Use the shared `field` constant and add no new colors.
+- **Native ✕:** hide `input[type="search"]::-webkit-search-cancel-button` (`appearance: none`) in the global stylesheet, so only the custom Clear shows. Check in Chrome and Safari.
+- **Clear** button (`linkButton`): shown only while the value is non-empty. It calls `onChange("")` and focuses the input.
+- **Escape:** if the value is non-empty, `preventDefault()` and `onChange("")`. If it's empty, do nothing, so Escape isn't swallowed for no reason.
+- **Results line:** a `<p aria-live="polite">` that is always rendered, so the live region exists before it changes. It has `text-[13px] text-muted mt-2`. While a query is active it reads "{resultCount} of {total} prompts". Use "prompt" when `total === 1`. With no query it is empty. Announcing on each keystroke is acceptable because the region is polite.
+- **Layout:** between the heading row and the list, wrapped in `mb-5`. Don't change the heading row or the card layout.
 
-## Step 3: Vault wiring (`app/components/prompt-vault.tsx`)
+## Step 3: Card hooks (`app/components/prompt-card.tsx`)
 
-State, both in `PromptVault`:
+- Add `data-prompt-id={id}` to the `<article>` and `data-card-focus` to the Edit button. These are the only hooks the vault uses to find a card's focus target.
+- **Focus rescue:** when a card unmounts while it holds focus, focus `#saved-prompts-heading`. Do it with a `useLayoutEffect` cleanup:
+  - copy `articleRef.current` into a local inside the effect, to keep the `refs` lint quiet;
+  - in the cleanup, if `el.contains(document.activeElement)`, focus the heading.
+- This covers an edit, a note change, an import or a cross-tab change that makes a focused card stop matching, plus any other unmount of a focused card.
+- **Verify in the browser** that the cleanup runs before the article leaves the DOM. If `activeElement` is already `<body>` by then, the check fails. Fall back to having the vault check `document.activeElement === document.body` in a layout effect keyed on the shown ids, and focus the heading there.
+- The existing explicit heading focus in `handleDelete` stays.
+
+## Step 4: Vault wiring (`app/components/prompt-vault.tsx`)
+
+State in `PromptVault`:
 - `query: string`
 - `visibleCount: number`, initially `PAGE_SIZE`
+- `searchInputRef`: passed to `PromptSearch`
+- `focusTargetId`: a ref holding the prompt id to focus after Load more
 
-Derived during render, with `useMemo`:
-- `index = buildSearchIndex(prompts)` keyed on `prompts`
-- `matches = filterPrompts(index, query)`, keyed on `index` and `query`
-- `shown = matches.slice(0, visibleCount)`
+Derived during render:
+- `index = useMemo(() => buildSearchIndex(prompts), [prompts])`
+- `matches = useMemo(() => filterPrompts(index, query), [index, query])`
+- `shown = matches.slice(0, visibleCount)`. `slice` already handles `visibleCount` beyond the list.
 
-**Reset the page size without an effect.** `set-state-in-effect` is an error, so reset in the event handler that changes the query:
+**Reset without an effect.** Every query change goes through one handler:
 
 ```ts
 function handleQueryChange(next: string) {
@@ -102,58 +126,94 @@ function handleQueryChange(next: string) {
 }
 ```
 
-Rendering:
-- **Count badge:** shows `matches.length`. With an active query it is the number of matches, and the "N prompts found" status above covers the rest. The existing badge classes don't change.
-- **No matches (query active, zero results):** the same dashed empty-state box, with text `No prompts match “{query}”.` and a **Clear search** `linkButton` inside it. Keep the text color rule from Phase 2 (`text-muted`).
-- **Empty library:** unchanged ("No prompts saved yet. Add your first one!"), and no search box.
-- **Footer under the list**, shown when `matches.length > shown.length`:
+Rendering, in order:
+- **Badge:** `prompts.length`, unchanged from Phase 2.
+- **Search box:** shown when `status === "ready" && (prompts.length > 0 || query !== "")` (default 2).
+- **Empty library** (`prompts.length === 0`): the Phase 2 message "No prompts saved yet. Add your first one!", unchanged.
+- **No matches** (`prompts.length > 0 && matches.length === 0`): the same dashed `emptyBox` with `text-muted`.
+  - Text: `No prompts match “{query}”.`
+  - Below it, a **Clear search** `linkButton` that calls `handleQueryChange("")` and focuses `searchInputRef`.
+- **List:** `shown.map(...)`, the same markup as today.
+- **Footer**, when `matches.length > shown.length`:
   - a muted line "Showing {shown.length} of {matches.length}" (`text-[13px] text-muted`)
-  - a **Load more prompts** button (`pillAccent`-style, with the `cursor-pointer` and `focusRing` rules). Don't reuse the label "Show more", which already means expand-a-card.
-  - On click: `setVisibleCount((n) => n + PAGE_SIZE)`.
-- **Focus after Load more:** move focus to the **Edit button of the first newly revealed card**, so keyboard and screen reader users land on the new content rather than staying on a button that moves. Do this by remembering the target id in a ref inside the click handler and focusing after render in an effect that only reads the ref (no `setState` in the effect). If the button unmounts because everything is loaded, this is also what keeps focus from falling to `<body>`.
+  - a **Load more prompts** button: `pillAccent` plus a hover style, with no overrides of properties already in the constant. Don't use the label "Show more", which already means expand-a-card.
 
-Interactions with existing behavior (each is verified in Step 6):
-- **Add prompt:** `AddPromptForm` calls an `onAdded` callback (or a context method) on success that sets `query` to `""` and `visibleCount` back to `PAGE_SIZE`. This is default 3. Keep the add form's own props otherwise unchanged.
-- **Delete and Undo:** restore re-inserts in sorted position. If the restored prompt sorts beyond `visibleCount`, it is still counted but not shown until Load more. That is acceptable; the Undo toast still confirms it.
-- **Delete shrinks the page:** `slice` handles `visibleCount` larger than the list.
-- **Import and cross-tab changes:** `prompts` changes, the index rebuilds, `query` and `visibleCount` are preserved.
-- **Edit mode:** editing a card that is in `shown` keeps it in `shown` until the save changes whether it matches (default 4).
+**Load more and focus:**
 
-## Step 4: Performance check
+```ts
+function handleLoadMore() {
+  focusTargetId.current = matches[shown.length]?.id ?? null;
+  setVisibleCount((n) => n + PAGE_SIZE);
+}
 
-Content can be up to 50,000 characters, so a worst-case library is large. `buildSearchIndex` runs once per `prompts` change, not per keystroke. As part of verification (Step 6), generate about 1,000 prompts with long content by importing a generated file, and measure the time from keystroke to updated list. If typing feels laggy (more than about 50ms per keystroke), add `useDeferredValue(query)` for `matches`. Don't add a debounce or the deferral before measuring.
+useEffect(() => {
+  const id = focusTargetId.current;
+  if (!id) return;
+  focusTargetId.current = null;
+  document
+    .querySelector<HTMLElement>(`[data-prompt-id="${CSS.escape(id)}"] [data-card-focus]`)
+    ?.focus();
+}, [visibleCount]);
+```
 
-## Step 5: Unit tests (`app/lib/prompts/search.test.ts`)
+The effect only reads and clears a ref, with no `setState`. On mount and after a query reset the ref is null, so the effect does nothing. When the last page loads, the footer unmounts, but focus has already moved to a card.
 
-Vitest, pure functions only, same style as the existing tests:
+**Add:** `<AddPromptForm onAdded={() => handleQueryChange("")} />`. In the form, call `onAdded?.()` after a successful `addPrompt`, right after `setValues(EMPTY)`. Focus stays on the title field, as today.
+
+Interactions with existing behavior (each is checked in Step 7):
+- **Delete and Undo:** restore re-inserts the prompt in sorted position. If it sorts beyond `visibleCount`, it is counted but hidden until Load more. The Undo toast still confirms it.
+- **Import and cross-tab:** `prompts` changes and the index rebuilds. `query` and `visibleCount` are kept.
+- **Edit:** a card that still matches stays where it is. A card that stops matching leaves the list, and focus is rescued as in Step 3.
+
+## Step 5: Performance check
+
+localStorage quota (a few MB in every browser) is the real limit on library size, not `CONTENT_MAX`. At that size, building the index (once per `prompts` change) and substring checks on each keystroke should be cheap.
+
+Test it during verification:
+- Generate an import file that fills the library to **just under quota**. For example, a few hundred prompts with a few KB of content each. Increase the size until import nearly fails.
+- Confirm that no `SAVE_ERROR` toast appears.
+- Measure from keystroke to updated list in the Performance panel.
+- If a keystroke takes more than about 50ms, use `useDeferredValue(query)` for `matches`. Don't add a debounce or the deferral before measuring.
+
+## Step 6: Unit tests (`app/lib/prompts/search.test.ts`)
+
+Use Vitest with pure functions only, in the same style as `validate.test.ts`. Cover:
 - An empty or whitespace query returns every prompt, in order.
-- Matches title, content, model and note independently.
-- Case-insensitive.
-- Multiple words are AND-ed across different fields.
-- A word that matches nothing returns an empty list.
-- A `null` note doesn't break matching and doesn't match the word "null".
-- Regex characters (`.`, `(`, `[`, `*`) are treated literally.
+- Title, content, model and note each match on their own.
+- Matching is case-insensitive.
+- Multiple words are AND-ed across different fields, in any order.
+- A word that matches nothing returns `[]`.
+- A `null` note doesn't break matching and doesn't match "null".
+- Regex characters (`.`, `(`, `[`, `*`, `\`) are treated literally.
+- A term can't match across a field boundary. For example, a title ending "foo" and content starting "bar" don't match "foobar".
 - Results keep the input order.
 - `buildSearchIndex` doesn't mutate its input.
 
-## Step 6: Verify
+## Step 7: Verify
 
-1. `npm run lint`, `npx tsc --noEmit`, `npm run test` and `npm run build` pass. Run lint and `tsc` after Step 3.
-2. **Search:** with the fixture plus about 15 prompts, typing filters live. Each of title, content, model and note matches. Case doesn't matter. Two words match across fields. The count badge and the "N prompts found" status update.
-3. **No results:** shows the message and a Clear search button. Clear restores the list and returns focus to the search input.
-4. **Escape** in the search box clears it. Clear button works with Enter and Space.
-5. **Pagination:** with 25 prompts, 10 show with "Showing 10 of 25". Load more gives 20, then 25, after which the footer disappears. Focus lands on the first new card's Edit button each time, and never falls to `<body>`.
-6. **Reset:** typing a query after loading more resets to 10 results.
-7. **Add:** adding a prompt while a query is active clears the query and shows the new prompt at the top.
-8. **Edit** a prompt so it no longer matches: it leaves the list on save. Cancel keeps it.
-9. **Delete and Undo** inside a filtered, paged list: counts stay correct, and Undo restores in place or is counted when beyond the visible window.
-10. **Export** while filtered exports the whole library. **Import** while filtered updates the counts and keeps the query.
-11. **Cross-tab:** adding a prompt in another tab while a query is active updates this tab correctly.
-12. **Performance:** the 1,000-prompt check from Step 4.
-13. **Visual:** at 1280 and 375 in both themes, the add form, header and cards are unchanged from Phase 2. The new search box and footer use only existing tokens and constants, and look native to the design. No horizontal scroll at 375.
-14. **Keyboard:** the search box, Clear, Clear search and Load more prompts are reachable by Tab, show a focus ring, and work with Enter or Space.
-15. No hydration warnings or console errors.
+1. `npm run lint`, `npx tsc --noEmit`, `npm run test` and `npm run build` all pass. Run lint and `tsc` after Step 4 as well.
+2. **Search** (about 15 prompts): typing filters live. Each field matches, case doesn't matter, and two words match across fields. The badge stays at the total, and "N of M prompts" updates.
+3. **Native UI:** there's no native ✕ in Chrome or Safari, only the custom Clear.
+4. **No results:** the message and Clear search appear. Clear search restores the list and focuses the input.
+5. **Escape** clears a non-empty query. Clear works with Enter and Space.
+6. **Pagination** (25 prompts): 10 show with "Showing 10 of 25". Load more gives 20, then 25, and the footer disappears. Each time, focus lands on the first new card's Edit button and never on `<body>`.
+7. **Reset:** typing after loading more goes back to 10.
+8. **Add** while filtered: the query clears and the new prompt is at the top.
+9. **Edit out of the results:** edit a prompt, and separately a note, so it stops matching. It leaves on save, and `document.activeElement` is the heading, not `<body>`. Cancel keeps it.
+10. **Delete and Undo** in a filtered, paged list: the counts stay correct, and Undo restores the prompt in place or counts it when it's beyond the window.
+11. **Export** while filtered exports the whole library. **Import** while filtered updates the counts and keeps the query.
+12. **Stale query:** set a query, delete every prompt, then import. The box reappears showing the query, not a hidden filter.
+13. **Cross-tab:** add a prompt in another tab while a query is active. This tab updates correctly.
+14. **Performance:** run the quota-sized check from Step 5.
+15. **Visual:** at 1280 and 375, in both themes, the add form, header and cards are unchanged. The new search box, results line and footer use only existing tokens and constants. No horizontal scroll at 375.
+16. **Keyboard:** search, Clear, Clear search and Load more prompts are all reachable by Tab, show a focus ring, and work with Enter or Space.
+17. No hydration warnings or console errors.
 
 ## Phase 3 preview (context only, don't build)
 
-When prompts come from Supabase, fetching everything stops scaling. The repository gains `list({ query?, limit, cursor? })`, the provider holds one page at a time, and Load more fetches the next cursor. `filterPrompts` then becomes the reference behavior for the server-side query (or Postgres full-text search on title, content, model and note). The UI in this plan should not need to change.
+When prompts come from Supabase, fetching everything stops scaling. The plan for that phase:
+- The repository gains `list({ query?, limit, cursor? })`.
+- The provider holds one page at a time, and Load more fetches the next cursor.
+- `filterPrompts` becomes the reference behavior for the server query, or for Postgres full-text search over title, content, model and note.
+
+At that point the total/match counts in default 5 need a server count, but the UI shouldn't otherwise change.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { formatPromptDate } from "@/app/lib/prompts/format";
 import type { Prompt } from "@/app/lib/prompts/types";
 import { PromptContent } from "@/app/components/prompt-content";
@@ -18,6 +18,20 @@ export function PromptCard({ prompt }: { prompt: Prompt }) {
   const [editing, setEditing] = useState(false);
   const editButtonRef = useRef<HTMLButtonElement>(null);
   const restoreFocus = useRef(false);
+  const articleRef = useRef<HTMLElement>(null);
+
+  // If this card unmounts while it holds focus (e.g. an edit made it stop matching the search),
+  // send focus to the heading instead of letting it fall to <body>. The isConnected check runs
+  // after the commit, so StrictMode's dev-only effect re-run (card stays in the DOM) is ignored.
+  useLayoutEffect(() => {
+    const el = articleRef.current;
+    return () => {
+      if (!el?.contains(document.activeElement)) return;
+      queueMicrotask(() => {
+        if (!el.isConnected) document.getElementById("saved-prompts-heading")?.focus();
+      });
+    };
+  }, []);
 
   // After leaving edit mode the Edit button remounts; put keyboard focus back on it.
   useEffect(() => {
@@ -56,7 +70,7 @@ export function PromptCard({ prompt }: { prompt: Prompt }) {
   }
 
   return (
-    <article className={card}>
+    <article ref={articleRef} data-prompt-id={id} className={card}>
       {editing ? (
         <PromptEditor prompt={prompt} onDone={closeEditor} />
       ) : (
@@ -68,6 +82,7 @@ export function PromptCard({ prompt }: { prompt: Prompt }) {
             <div className="flex shrink-0 gap-2">
               <button
                 ref={editButtonRef}
+                data-card-focus
                 type="button"
                 aria-label={`Edit ${title}`}
                 onClick={() => setEditing(true)}

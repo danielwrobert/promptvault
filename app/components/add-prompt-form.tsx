@@ -9,7 +9,7 @@ import { isValidInput } from "@/app/lib/prompts/validate";
 
 const EMPTY: PromptInput = { title: "", model: "", content: "" };
 
-export function AddPromptForm() {
+export function AddPromptForm({ onAdded }: { onAdded?: () => void }) {
   const { addPrompt } = usePrompts();
   const [values, setValues] = useState<PromptInput>(EMPTY);
   const [pending, setPending] = useState(false);
@@ -24,6 +24,7 @@ export function AddPromptForm() {
     try {
       await addPrompt(values);
       setValues(EMPTY);
+      onAdded?.();
       titleRef.current?.focus();
     } catch {
       // keep what the user typed; the provider has already shown a toast
