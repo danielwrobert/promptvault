@@ -59,6 +59,11 @@
   /* reference.html never sets line-height; Tailwind preflight sets 1.5 — undo it */
   html { line-height: normal; }
 
+  /* The search box has its own Clear button; hide the browser's built-in ✕ */
+  input[type="search"]::-webkit-search-cancel-button {
+    appearance: none;
+  }
+
   h1, h2, h3 {
     font-family: var(--font-ovo), serif;
     font-weight: 400;
